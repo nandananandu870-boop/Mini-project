@@ -8,7 +8,7 @@ from googleapiclient.errors import HttpError
 from rapidfuzz import fuzz
 import httplib2
 
-# --- CONFIGURATION ---
+# --- CONFIG ---
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # ok for localhost only
 APP_SECRET_KEY = "replace-with-a-random-secret-key"
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
@@ -53,9 +53,38 @@ def safe_build_service(creds, retries=3):
                 return None
 
 
-def find_near_duplicates(emails, threshold=85):
-    """Near-duplicates based on SUBJECT similarity (85–99%)."""
-    near_pairs = []
+def get_or_create_label(service, label_name: str) -> str:
+    """Return label ID; create label if it doesn't exist."""
+    labels = service.users().labels().list(userId="me").execute().get("labels", [])
+    for lbl in labels:
+        if lbl.get("name", "").lower() == label_name.lower():
+            return lbl["id"]
+    body = {
+        "name": label_name,
+        "labelListVisibility": "labelShow",
+        "messageListVisibility": "show",
+    }
+    created = service.users().labels().create(userId="me", body=body).execute()
+    return created["id"]
+
+
+def batch_add_label(service, ids, label_id):
+    if not ids:
+        return
+    body = {"ids": list(ids), "addLabelIds": [label_id], "removeLabelIds": []}
+    service.users().messages().batchModify(userId="me", body=body).execute()
+
+
+def batch_remove_label(service, ids, label_id):
+    if not ids:
+        return
+    body = {"ids": list(ids), "addLabelIds": [], "removeLabelIds": [label_id]}
+    service.users().messages().batchModify(userId="me", body=body).execute()
+
+
+def find_near_pairs(emails, threshold=70):
+    """Near-duplicates based on SUBJECT similarity (70–99%). Return list of pairs."""
+    pairs = []
     n = len(emails)
     for i in range(n):
         s1 = emails[i]["subject"] or ""
@@ -66,13 +95,13 @@ def find_near_duplicates(emails, threshold=85):
             if not s2:
                 continue
             sim = fuzz.token_sort_ratio(s1, s2)
-            if 85 <= sim < 100:
-                near_pairs.append({
+            if threshold <= sim < 100:
+                pairs.append({
                     "email1": emails[i],
                     "email2": emails[j],
                     "similarity": round(sim, 2)
                 })
-    return near_pairs
+    return pairs
 
 
 # --- ROUTES ---
@@ -122,7 +151,11 @@ def signout():
 
 @app.route("/dedupe", methods=["POST"])
 def dedupe():
-    """Scan Gmail, group exact duplicates (Sender + Subject), and compute near-duplicates."""
+    """
+    Scan Gmail, group exact duplicates (Sender + Subject),
+    compute near duplicates (70–99%), label them,
+    and show counts that match Gmail's label sidebar (conversation-based).
+    """
     creds = creds_from_session()
     if not creds or not creds.valid:
         return redirect(url_for("index"))
@@ -131,6 +164,10 @@ def dedupe():
     if not service:
         flash("❌ Could not reach Gmail servers. Please check internet or VPN.")
         return redirect(url_for("index"))
+
+    # Prepare labels (create if missing)
+    lbl_dup = get_or_create_label(service, "DUPLICATE")
+    lbl_near = get_or_create_label(service, "NEAR_DUPLICATE")
 
     max_emails = int(request.form.get("max_emails", 100))
 
@@ -155,6 +192,7 @@ def dedupe():
 
             email = {
                 "id": m["id"],
+                "threadId": msg.get("threadId", ""),     # conversation id (matches Gmail label count)
                 "from": headers.get("From", "").strip(),
                 "subject": headers.get("Subject", "").strip(),
                 "date": headers.get("Date", ""),
@@ -183,32 +221,63 @@ def dedupe():
             emails_sorted = sorted(emails, key=lambda x: x["ts"], reverse=True)
             duplicate_groups.append(emails_sorted)
 
+    # Flat list for table + label ids (messages)
     duplicates_flat = [e for grp in duplicate_groups for e in grp]
+    duplicate_ids = [e["id"] for e in duplicates_flat]
+    # Conversation-based count (matches Gmail label sidebar)
+    duplicate_threads = sorted({e["threadId"] for e in duplicates_flat if e.get("threadId")})
 
-    # ✅ TRUE DUPLICATE COUNT (each group keeps 1)
-    duplicate_count = sum(max(0, len(grp) - 1) for grp in duplicate_groups)
+    # Label all exact duplicates
+    if duplicate_ids:
+        batch_add_label(service, duplicate_ids, lbl_dup)
 
-    # ---- NEAR DUPES (85–99% subject match) ----
-    near_pairs = find_near_duplicates(all_emails, threshold=85)
+    # ---- NEAR DUPES (70–99% by subject) ----
+    near_pairs = find_near_pairs(all_emails, threshold=70)
 
-    # store for smart delete
+    # Unique message IDs & threads involved in near dupes
+    near_ids = set()
+    near_threads = set()
+    for p in near_pairs:
+        near_ids.add(p["email1"]["id"])
+        near_ids.add(p["email2"]["id"])
+        if p["email1"].get("threadId"):
+            near_threads.add(p["email1"]["threadId"])
+        if p["email2"].get("threadId"):
+            near_threads.add(p["email2"]["threadId"])
+
+    # Apply NEAR_DUPLICATE label
+    if near_ids:
+        batch_add_label(service, list(near_ids), lbl_near)
+
+    # Save groups for Smart Delete; remember dup label id so we can remove from kept copy
     session["duplicate_groups"] = duplicate_groups
+    session["dup_label_id"] = lbl_dup
 
-    uniques_count = len(all_emails) - duplicate_count
+    # Approx uniques (message-based): total - redundant copies
+    redundant_copies = sum(max(0, len(grp) - 1) for grp in duplicate_groups)
+    uniques_count = len(all_emails) - redundant_copies
+
+    # COUNTS TO DISPLAY (conversation-based to match Gmail labels)
+    exact_count_conversations = len(duplicate_threads)
+    near_count_conversations = len(near_threads)
 
     return render_template(
         "results.html",
         fetched=fetched,
         uniques=uniques_count,
+        # table data
         duplicates=duplicates_flat,
-        duplicate_groups=duplicate_groups,
-        duplicate_count=duplicate_count,
+        # counts that match labels (conversation-based)
+        exact_count=exact_count_conversations,
+        near_count=near_count_conversations,
+        # near pairs table
         similars=near_pairs
     )
 
+
 @app.route("/delete", methods=["POST"])
 def delete_duplicates():
-    """Manual delete: trash only the checked IDs."""
+    """Manual delete: send only the checked IDs to Trash (recoverable)."""
     creds = creds_from_session()
     if not creds or not creds.valid:
         return redirect(url_for("index"))
@@ -223,7 +292,6 @@ def delete_duplicates():
 
     for message_id in ids:
         try:
-            # read basic info for summary page first
             msg = service.users().messages().get(
                 userId="me",
                 id=message_id,
@@ -247,8 +315,8 @@ def delete_duplicates():
 @app.route("/smart_delete", methods=["POST"])
 def smart_delete():
     """
-    Auto-delete per exact duplicate group:
-    KEEP the NEWEST (by internalDate), delete the rest.
+    KEEP the NEWEST (by internalDate) in each exact-duplicate group,
+    PERMANENTLY delete the rest, and remove DUPLICATE label from the kept copy.
     """
     creds = creds_from_session()
     if not creds or not creds.valid:
@@ -260,13 +328,16 @@ def smart_delete():
         return redirect(url_for("index"))
 
     duplicate_groups = session.get("duplicate_groups", [])
+    dup_label_id = session.get("dup_label_id", None)
+
     deleted_mails = []
     kept_mails = []
 
     for group in duplicate_groups:
         if not group:
             continue
-        # group already sorted newest first in /dedupe
+
+        # newest first (already sorted in /dedupe)
         keep = group[0]
         kept_mails.append({
             "id": keep["id"],
@@ -275,9 +346,17 @@ def smart_delete():
             "date": keep["date"]
         })
 
+        # Remove DUPLICATE label from the kept copy
+        if dup_label_id:
+            try:
+                batch_remove_label(service, [keep["id"]], dup_label_id)
+            except Exception:
+                pass
+
+        # Permanently delete the older copies
         for e in group[1:]:
             try:
-                service.users().messages().trash(userId="me", id=e["id"]).execute()
+                service.users().messages().delete(userId="me", id=e["id"]).execute()
                 deleted_mails.append({
                     "id": e["id"],
                     "from": e["from"],
@@ -290,6 +369,6 @@ def smart_delete():
     return render_template("deleted.html", kept_one=True, deleted_mails=deleted_mails, kept_mails=kept_mails)
 
 
-# --- RUN APP ---
+# --- RUN ---
 if __name__ == "__main__":
     app.run("0.0.0.0", port=5000, debug=True)

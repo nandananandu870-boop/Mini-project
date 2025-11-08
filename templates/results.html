@@ -18,13 +18,16 @@
 </head>
 <body>
   <h2>📧 Scan Results</h2>
-  <p>Fetched Emails: <strong>{{ fetched }}</strong></p>
-  <p>Estimated Unique Emails: <strong>{{ uniques }}</strong></p>
-  <p>Exact Duplicates Found: <strong>{{ duplicate_count }}</strong></p>
 
+  <p>Fetched Emails (messages): <strong>{{ fetched }}</strong></p>
+  <p>Estimated Unique Emails (messages): <strong>{{ uniques }}</strong></p>
+  <p>
+    Exact Duplicates (conversations): <strong>{{ exact_count }}</strong><br>
+    Near Duplicates (conversations, 70–99%): <strong>{{ near_count }}</strong>
+  </p>
 
   <h3>Exact Duplicates (Sender + Subject match)</h3>
-  {% if duplicates %}
+  {% if duplicates and duplicates|length > 0 %}
     <form action="/delete" method="POST">
       <table>
         <tr>
@@ -42,17 +45,17 @@
         </tr>
         {% endfor %}
       </table>
-      <small>💡 Selecting rows deletes only those emails.</small><br>
+      <small>💡 Selecting rows deletes only those emails (to Trash).</small><br>
       <button type="submit" class="btn btn-delete">🗑 Delete Selected</button>
     </form>
 
     <div class="panel">
       <h3>🤖 Smart Delete</h3>
-      <p>One-click cleanup: <strong>keeps the newest email</strong> from each duplicate group and moves older copies to Trash.</p>
+      <p>One-click cleanup: <strong>keeps the newest</strong> message from each exact-duplicate group and
+         <strong>permanently deletes</strong> the older copies. The kept copy loses the <code>DUPLICATE</code> label.</p>
       <form action="/smart_delete" method="POST">
         <button type="submit" class="btn btn-smart">Run Smart Delete</button>
       </form>
-      <small>Safe by design: at least one copy of every conversation stays in your mailbox.</small>
     </div>
   {% else %}
     <p>No exact duplicates found 🎉</p>
@@ -60,8 +63,8 @@
 
   <hr>
 
-  <h3>Near Duplicates (Similarity 85–99% by Subject)</h3>
-  {% if similars %}
+  <h3>Near Duplicates (Similarity 70–99% by Subject)</h3>
+  {% if similars and similars|length > 0 %}
     <table>
       <tr>
         <th>From</th>
