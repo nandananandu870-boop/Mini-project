@@ -1,82 +1,212 @@
+/* ===== Base Page ===== */
 body {
-  background: #f4f7fa;
+  background: linear-gradient(145deg, #eef4fc, #f9fbff);
   font-family: "Poppins", sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+  margin: 0;
+  padding: 0;
+  color: #1f2937;
 }
 
+/* ===== General Card Layout ===== */
 .card {
   background: #fff;
   border-radius: 20px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   padding: 40px;
   width: 400px;
   text-align: center;
+  margin: 80px auto;
 }
 
-.icon {
-  width: 60px;
-  margin-bottom: 15px;
+/* ===== Header ===== */
+h2, h3 {
+  color: #1e3a8a;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 
-input {
+p {
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== Input ===== */
+input[type="number"],
+input[type="text"] {
   width: 80%;
   padding: 10px;
   margin: 15px 0;
-  border: 1px solid #ddd;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
+  font-family: "Poppins", sans-serif;
 }
 
-.btn-green, .btn-blue {
-  width: 85%;
-  margin: 10px 0;
-  padding: 12px;
+/* ===== Buttons ===== */
+.btn-green, .btn-blue, .btn-smart, .btn-delete {
+  width: auto;
+  min-width: 160px;
+  padding: 12px 18px;
   border: none;
   border-radius: 10px;
   color: white;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: "Poppins", sans-serif;
 }
 
-.btn-green { background: #34a853; }
-.btn-blue { background: linear-gradient(90deg, #4285F4, #34A853); }
+.btn-green { background: #22c55e; }
+.btn-blue { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+.btn-delete { background: #ef4444; }
+.btn-smart { background: #16a34a; }
 
+.btn-green:hover, .btn-blue:hover, .btn-smart:hover, .btn-delete:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* ===== Results Card ===== */
 .result-card {
   background: #fff;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-  padding: 30px;
-  width: 800px;
+  border-radius: 16px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+  padding: 30px 40px;
+  width: 90%;
+  max-width: 1100px;
   margin: 30px auto;
+  animation: fadeIn 0.5s ease-in;
 }
 
+/* ===== Table ===== */
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 th, td {
-  border: 1px solid #ddd;
-  padding: 10px;
+  border: 1px solid #e2e8f0;
+  padding: 10px 12px;
   text-align: left;
+  font-size: 14px;
 }
 
 th {
-  background: #f2f2f2;
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #1e293b;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
+/* Hover row */
+tr:hover {
+  background: #f9fafb;
+  transition: 0.2s;
+}
+
+/* ===== Label Badges ===== */
+.label {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.dup-label {
+  background: #dc2626;
+}
+
+.near-label {
+  background: #2563eb;
+}
+
+/* ===== Smart Delete Panel ===== */
+.panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 25px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+}
+
+.panel h3 {
+  color: #0f172a;
+}
+
+.panel p {
+  font-size: 14px;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+/* ===== Similarity Bar ===== */
 .similarity-bar {
-  height: 10px;
+  height: 8px;
   border-radius: 5px;
-  background: #ddd;
+  background: #e2e8f0;
   position: relative;
+  overflow: hidden;
 }
 
 .similarity-bar div {
-  height: 10px;
+  height: 8px;
   border-radius: 5px;
-  background: #34a853;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+/* ===== Stats Header ===== */
+.stats-container {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 16px 22px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 150px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card h4 {
+  font-size: 14px;
+  margin: 0;
+  color: #1d4ed8;
+}
+
+.stat-card span {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-top: 6px;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Footer ===== */
+footer {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 40px;
+  padding-bottom: 20px;
 }
