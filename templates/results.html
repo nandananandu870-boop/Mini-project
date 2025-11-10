@@ -2,97 +2,101 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📊 Gmail Data De-duplication Results</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan Results Summary</title>
   <style>
     body {
-      font-family: "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #f2f6ff, #ffffff);
-      color: #222;
+      background: #f4f7fb;
+      font-family: "Poppins", sans-serif;
       margin: 0;
-      padding: 30px;
+      padding: 0;
+      color: #222;
+    }
+
+    /* Page container */
+    .wrapper {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
     }
 
     h2 {
       text-align: center;
-      font-size: 28px;
-      color: #0d47a1;
+      color: #1e3a8a;
+      font-size: 1.8rem;
       font-weight: 700;
-      margin-bottom: 30px;
-    }
-
-    /* Back to Dashboard Button */
-    .back-btn {
-      position: fixed;
-      top: 25px;
-      right: 25px;
-      background: #1565c0;
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      transition: background 0.3s ease, transform 0.2s ease;
-    }
-    .back-btn:hover {
-      background: #0d47a1;
-      transform: scale(1.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
     /* Summary Cards */
-    .stats-container {
+    .summary {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
       gap: 20px;
-      margin-bottom: 35px;
+      margin: 30px auto 40px;
     }
-    .stat-card {
-      background: #e3f2fd;
-      border-radius: 12px;
-      padding: 20px 26px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.08);
-      min-width: 160px;
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 25px 30px;
+      min-width: 200px;
       text-align: center;
-      transition: 0.3s;
-    }
-    .stat-card:hover { background: #bbdefb; transform: translateY(-3px); }
-    .stat-card h4 { margin: 0; color: #0d47a1; font-size: 16px; }
-    .stat-card span { display:block; margin-top:6px; font-size:22px; font-weight:700; color:#1a237e; }
-
-    /* Scrollable Tables */
-    .table-wrapper {
-      max-height: 400px;
-      overflow-y: auto;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      background: #fff;
-      margin-top: 10px;
+      transition: transform 0.3s;
     }
 
+    .card:hover {
+      transform: translateY(-3px);
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 15px;
+      color: #475569;
+    }
+
+    .card p {
+      font-size: 26px;
+      font-weight: 700;
+      color: #1e40af;
+      margin: 5px 0 0;
+    }
+
+    /* Table styling */
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px;
+      margin-top: 15px;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
     }
 
     th, td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #eee;
+      padding: 12px 14px;
+      border-bottom: 1px solid #e2e8f0;
       text-align: left;
     }
 
     th {
-      background: #e8eaf6;
-      color: #1a237e;
-      font-weight: 600;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      background: #e9efff;
+      color: #1e3a8a;
+      font-size: 14px;
+      text-transform: uppercase;
     }
 
-    tr:hover { background: #f4f6ff; }
+    td {
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background-color: #f8fafc;
+    }
 
     /* Buttons */
     .btn {
@@ -101,135 +105,124 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
-      transition: 0.3s;
-      margin-top: 8px;
+      transition: background 0.3s;
     }
-    .btn-delete { background: #e53935; color: #fff; }
-    .btn-delete:hover { background: #b71c1c; }
-    .btn-smart { background: #43a047; color: #fff; }
-    .btn-smart:hover { background: #2e7d32; }
+
+    .btn-delete {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #dc2626;
+    }
+
+    .btn-smart {
+      background: #16a34a;
+      color: white;
+    }
+
+    .btn-smart:hover {
+      background: #15803d;
+    }
+
+    /* Label pills */
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .dup { background: #dc2626; }
+    .near { background: #2563eb; }
 
     /* Panels */
     .panel {
-      background: rgba(255,255,255,0.97);
-      backdrop-filter: blur(10px);
+      background: #ffffff;
       border-radius: 12px;
-      padding: 20px;
+      padding: 25px 30px;
       margin-top: 35px;
-      border: 1px solid rgba(0,0,0,0.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
-    .panel h3 { margin-top:0; color: #1b5e20; }
 
-    /* Labels */
-    .label {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 700;
+    .panel h3 {
+      margin: 0 0 10px;
+      color: #111827;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Back Button */
+    .back-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #2563eb;
       color: #fff;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+      transition: background 0.3s;
     }
-    .dup-label { background: #d32f2f; }
-    .near-label { background: #0288d1; }
 
-    footer {
+    .back-btn:hover {
+      background: #1e40af;
+    }
+
+    /* Center the delete note */
+    small {
+      display: block;
       text-align: center;
-      margin-top: 50px;
-      font-size: 13px;
-      color: #555;
+      color: #6b7280;
+      margin-top: 6px;
     }
 
-    /* Scrollbar Style */
-    .table-wrapper::-webkit-scrollbar {
-      height: 8px;
-      width: 8px;
+    /* Responsive */
+    @media (max-width: 768px) {
+      .card { min-width: 160px; }
+      table { font-size: 12px; }
+      th, td { padding: 8px; }
     }
-    .table-wrapper::-webkit-scrollbar-thumb {
-      background: #c5cae9;
-      border-radius: 6px;
-    }
-    .table-wrapper::-webkit-scrollbar-thumb:hover {
-      background: #9fa8da;
-    }
-
   </style>
 </head>
 <body>
-<<<<<<< HEAD
-  <h2>📧 Scan Results</h2>
-=======
+  <button class="back-btn" onclick="window.location.href='/'">⬅ Back to Dashboard</button>
 
-  <!-- Back to Dashboard Button -->
-  <a href="/" class="back-btn">↩ Back to Dashboard</a>
+  <div class="wrapper">
+    <h2>📊 Scan Results Summary</h2>
 
-  <h2>📬 Scan Results Summary</h2>
-
-  <<div class="stats-container">
-  <div class="stat-card">
-    <h4>Fetched Emails</h4>
-    <span>{{ fetched }}</span>
-  </div>
-  <div class="stat-card">
-    <h4>Unique Emails</h4>
-    <span>{{ uniques }}</span>
-  </div>
-  <div class="stat-card">
-    <h4>Exact Duplicates</h4>
-    <span>{{ duplicate_count }}</span>
-    <small style="display:block;font-size:12px;color:#555;">({{ redundant_copies }} redundant copies)</small>
-  </div>
-  <div class="stat-card">
-    <h4>Near Duplicates</h4>
-    <span>{{ near_pairs_count }}</span>
-  </div>
-</div>
->>>>>>> d6f3733 (all set)
-
-  <p>Fetched Emails (messages): <strong>{{ fetched }}</strong></p>
-  <p>Estimated Unique Emails (messages): <strong>{{ uniques }}</strong></p>
-  <p>
-    Exact Duplicates (conversations): <strong>{{ exact_count }}</strong><br>
-    Near Duplicates (conversations, 70–99%): <strong>{{ near_count }}</strong>
-  </p>
-
-<<<<<<< HEAD
-  <h3>Exact Duplicates (Sender + Subject match)</h3>
-  {% if duplicates and duplicates|length > 0 %}
-    <form action="/delete" method="POST">
-      <table>
-        <tr>
-          <th>Select</th>
-          <th>From</th>
-          <th>Subject</th>
-          <th>Date</th>
-        </tr>
-        {% for d in duplicates %}
-        <tr>
-          <td><input type="checkbox" name="ids" value="{{ d.id }}"></td>
-          <td>{{ d.from }}</td>
-          <td>{{ d.subject }}</td>
-          <td>{{ d.date }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-      <small>💡 Selecting rows deletes only those emails (to Trash).</small><br>
-      <button type="submit" class="btn btn-delete">🗑 Delete Selected</button>
-    </form>
-
-    <div class="panel">
-      <h3>🤖 Smart Delete</h3>
-      <p>One-click cleanup: <strong>keeps the newest</strong> message from each exact-duplicate group and
-         <strong>permanently deletes</strong> the older copies. The kept copy loses the <code>DUPLICATE</code> label.</p>
-      <form action="/smart_delete" method="POST">
-        <button type="submit" class="btn btn-smart">Run Smart Delete</button>
-      </form>
+    <div class="summary">
+      <div class="card">
+        <h3>Fetched Emails</h3>
+        <p>{{ fetched }}</p>
+      </div>
+      <div class="card">
+        <h3>Unique Emails</h3>
+        <p>{{ uniques }}</p>
+      </div>
+      <div class="card">
+        <h3>Exact Duplicates</h3>
+        <p>{{ duplicate_count }}</p>
+      </div>
+      <div class="card">
+        <h3>Near Duplicates</h3>
+        <p>{{ near_unique_count }}</p>
+      </div>
     </div>
-=======
-  <!-- Exact Duplicates -->
-  <h3>📑 Exact Duplicates (Sender + Subject match)</h3>
-  {% if duplicates %}
-    <form action="/delete" method="POST">
-      <div class="table-wrapper">
+
+    <!-- Exact Duplicates -->
+    <div class="panel">
+      <h3>📑 Exact Duplicates (Sender + Subject match)</h3>
+      {% if duplicates %}
+      <form action="/delete" method="POST">
         <table>
           <thead>
             <tr>
@@ -247,96 +240,65 @@
               <td>{{ d.from }}</td>
               <td>{{ d.subject }}</td>
               <td>{{ d.date }}</td>
-              <td><span class="label dup-label">DUPLICATE</span></td>
+              <td><span class="pill dup">DUPLICATE</span></td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
+        <small>⚠ Selecting rows permanently deletes those emails.</small>
+        <div style="text-align:center; margin-top:15px;">
+          <button type="submit" class="btn btn-delete">🗑 Delete Selected</button>
+        </div>
+      </form>
+      {% else %}
+      <p style="text-align:center;">🎉 No exact duplicates found!</p>
+      {% endif %}
+    </div>
+
+    <!-- Smart Delete -->
+    <div class="panel">
+      <h3>🤖 Smart Delete</h3>
+      <p style="text-align:center;">
+        Keeps <strong>one safe copy</strong> of each duplicate email group and 
+        <strong>permanently deletes</strong> the remaining duplicate copies automatically.
+      </p>
+      <div style="text-align:center; margin-top:10px;">
+        <form action="/smart_delete" method="POST">
+          <button type="submit" class="btn btn-smart">Run Smart Delete</button>
+        </form>
       </div>
-      <p style="font-size:13px;color:#555;">⚠ Selecting rows permanently deletes those emails.</p>
-      <button type="submit" class="btn btn-delete">🗑 Delete Selected</button>
-    </form>
->>>>>>> d6f3733 (all set)
-  {% else %}
-    <p>No exact duplicates found 🎉</p>
-  {% endif %}
+    </div>
 
- <!-- Smart Delete -->
-<div class="panel">
-  <h3>🧠 Smart Delete</h3>
-  <p>
-    Keeps <strong>one safe copy</strong> of each duplicate email group and
-    <strong>permanently deletes</strong> the remaining duplicate copies automatically.
-  </p>
-  <form action="/smart_delete" method="POST">
-    <button type="submit" class="btn btn-smart">⚡ Run Smart Delete</button>
-  </form>
-  <small style="color:#444;">
-    One click cleanup — newest email is safely kept, others are deleted permanently.
-  </small>
-</div>
-
-
-  <!-- Near Duplicates -->
-  <div class="panel">
-    <h3>✨ Near Duplicates (70–99 % Similarity by Subject)</h3>
-    {% if similars %}
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>From</th>
-              <th>Subject 1</th>
-              <th>Subject 2</th>
-              <th>Similarity (%)</th>
-              <th>Label</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for pair in similars %}
-            <tr>
-              <td>{{ pair.email1.from }}</td>
-              <td>{{ pair.email1.subject }}</td>
-              <td>{{ pair.email2.subject }}</td>
-              <td>{{ pair.similarity }}</td>
-              <td><span class="label near-label">NEAR_DUPLICATE</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p>No near duplicates found 🎉</p>
-    {% endif %}
+    <!-- Near Duplicates -->
+    <div class="panel">
+      <h3>✨ Near Duplicates (70–99% Similarity by Subject)</h3>
+      {% if similars %}
+      <table>
+        <thead>
+          <tr>
+            <th>From</th>
+            <th>Subject 1</th>
+            <th>Subject 2</th>
+            <th>Similarity (%)</th>
+            <th>Label</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pair in similars %}
+          <tr>
+            <td>{{ pair.email1.from }}</td>
+            <td>{{ pair.email1.subject }}</td>
+            <td>{{ pair.email2.subject }}</td>
+            <td>{{ pair.similarity }}</td>
+            <td><span class="pill near">NEAR_DUPLICATE</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="text-align:center;">No near duplicates found 🎯</p>
+      {% endif %}
+    </div>
   </div>
-
-  <footer>
-    © 2025 Gmail Data De-duplication | Designed by <b>Nandana</b> ✨
-  </footer>
-
-<<<<<<< HEAD
-  <h3>Near Duplicates (Similarity 70–99% by Subject)</h3>
-  {% if similars and similars|length > 0 %}
-    <table>
-      <tr>
-        <th>From</th>
-        <th>Subject 1</th>
-        <th>Subject 2</th>
-        <th>Similarity (%)</th>
-      </tr>
-      {% for pair in similars %}
-      <tr>
-        <td>{{ pair.email1.from }}</td>
-        <td>{{ pair.email1.subject }}</td>
-        <td>{{ pair.email2.subject }}</td>
-        <td>{{ pair.similarity }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-  {% else %}
-    <p>No near duplicates found.</p>
-  {% endif %}
-=======
->>>>>>> d6f3733 (all set)
 </body>
 </html>
