@@ -1,228 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gmail Data De-duplication</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: "Poppins", sans-serif;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gmail De-duplication</title>
 
-    body {
-      height: 100vh;
-      background: linear-gradient(135deg, #dfe9f3 0%, #ffffff 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Poppins", sans-serif;
+            background: #0d1b2a;
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
 
-    .container {
-      background: rgba(255, 255, 255, 0.4);
-      border-radius: 25px;
-      padding: 50px 45px;
-      width: 380px;
-      text-align: center;
-      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(15px);
-      animation: fadeUp 0.8s ease;
-      position: relative;
-      z-index: 2;
-    }
+        .container {
+            background: #102542;
+            padding: 35px 40px;
+            border-radius: 15px;
+            width: 380px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(0,0,0,0.3);
+        }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+        h2 {
+            margin-bottom: 5px;
+        }
 
-    h1 {
-      font-size: 26px;
-      margin-bottom: 10px;
-      color: #202124;
-      font-weight: 700;
-    }
+        .subtext {
+            font-size: 13px;
+            margin-bottom: 25px;
+            color: #d0d0d0;
+        }
 
-    h1 span { color: #4285F4; }
+        input {
+            width: 90%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
 
-    p {
-      color: #555;
-      font-size: 14px;
-      margin-bottom: 25px;
-    }
+        .scan-btn, .login-btn, .logout-btn {
+            width: 95%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-    .logo {
-      font-size: 45px;
-      margin-bottom: 10px;
-      animation: float 3s ease-in-out infinite;
-    }
+        .scan-btn {
+            background: linear-gradient(to right, #16db93, #1e90ff);
+            color: white;
+        }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
+        .scan-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
 
-    input {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.8);
-      font-size: 14px;
-      outline: none;
-      margin-bottom: 20px;
-      transition: all 0.3s;
-    }
+        .login-btn {
+            background: #1e90ff;
+            color: white;
+        }
 
-    input:focus {
-      background: #fff;
-      box-shadow: 0 0 0 2px #4285F4;
-    }
+        .logout-btn {
+            background: #ff4d4d;
+            color: white;
+        }
 
-    button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      color: white;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
+        .scan-btn:hover {
+            transform: scale(1.02);
+        }
 
-    .btn-login {
-      background: linear-gradient(90deg, #34a853, #0f9d58);
-      margin-bottom: 15px;
-    }
+        /* Spinner */
+        .spinner {
+            display: none;
+            margin-top: 15px;
+        }
 
-    .btn-login:hover {
-      transform: translateY(-2px);
-      background: linear-gradient(90deg, #0f9d58, #34a853);
-    }
+        .spinner div {
+            width: 10px;
+            height: 10px;
+            background-color: #1e90ff;
+            border-radius: 100%;
+            display: inline-block;
+            animation: bouncedelay 1.4s infinite ease-in-out both;
+        }
 
-    .btn-google {
-      background: linear-gradient(90deg, #4285f4, #34a853);
-    }
+        .spinner .bounce1 { animation-delay: -0.32s; }
+        .spinner .bounce2 { animation-delay: -0.16s; }
 
-    .btn-google:hover {
-      transform: translateY(-2px);
-      background: linear-gradient(90deg, #357ae8, #0f9d58);
-    }
-
-    footer {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #666;
-    }
-
-    footer span {
-      color: #4285f4;
-      font-weight: 600;
-    }
-
-    /* ===== LOADING OVERLAY ===== */
-    #loadingOverlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.92);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      text-align: center;
-      backdrop-filter: blur(6px);
-    }
-
-    .spinner {
-      border: 6px solid #e5e7eb;
-      border-top: 6px solid #4285f4;
-      border-radius: 50%;
-      width: 70px;
-      height: 70px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .loading-text {
-      font-size: 1.2rem;
-      color: #1e3a8a;
-      font-weight: 600;
-      margin-bottom: 5px;
-    }
-
-    .dots::after {
-      content: "";
-      animation: dots 1.5s steps(5, end) infinite;
-    }
-
-    @keyframes dots {
-      0%, 20% { content: "."; }
-      40% { content: ".."; }
-      60% { content: "..."; }
-      80%, 100% { content: "...."; }
-    }
-
-    .sub-text {
-      font-size: 0.9rem;
-      color: #4b5563;
-    }
-  </style>
+        @keyframes bouncedelay {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+    </style>
 </head>
+
 <body>
-  <div class="container">
-    <div class="logo">📧</div>
-    <h1><span>Gmail</span> De-duplication</h1>
-    <p>Remove duplicate emails securely and efficiently.</p>
 
-    {% if signed_in %}
-      <form id="dedupeForm" action="{{ url_for('dedupe') }}" method="POST">
-        <label>Number of emails to scan:</label>
-        <input type="number" name="max_emails" value="1000" min="10" max="2000" required>
-        <button type="submit" class="btn-login">🧹 Scan for Duplicates</button>
-      </form>
+<div class="container">
+    <h2>Gmail De-duplication</h2>
+    <p class="subtext">
+        Sign in, choose number of emails to scan, and run the dedupe scanner.
+    </p>
 
-      <a href="{{ url_for('signout') }}">
-        <button class="btn-google">🚪 Sign Out</button>
-      </a>
-    {% else %}
-      <a href="{{ url_for('authorize') }}">
-        <button class="btn-google">🔐 Sign in with Google</button>
-      </a>
-    {% endif %}
+    <form id="scanForm" action="/dedupe" method="POST">
+        <label style="font-size:13px;">Number of emails to scan (10–2000)</label>
+        <input 
+            type="number" 
+            id="max_emails" 
+            name="max_emails" 
+            value="100" 
+            min="10" 
+            max="2000" 
+            required
+        />
 
-    <footer>
-      Built with ❤️ using <span>Flask</span> & <span>Gmail API</span>
-    </footer>
-  </div>
+        <!-- SCAN BUTTON (Enabled only if signed in) -->
+        {% if signed_in %}
+            <button class="scan-btn" type="submit" id="scanButton">⚡ Scan</button>
+            <button class="logout-btn" onclick="window.location='/logout'; return false;">Sign out</button>
+        {% else %}
+            <button class="scan-btn" type="button" id="scanButton" disabled>⚡ Scan (Sign in first)</button>
+            <button class="login-btn" onclick="window.location='/authorize'; return false;">Sign in with Google</button>
+        {% endif %}
 
-  <!-- LOADING OVERLAY -->
-  <div id="loadingOverlay">
-    <div class="spinner"></div>
-    <div class="loading-text">Scanning your Gmail<span class="dots"></span></div>
-    <p class="sub-text">This may take a few minutes depending on email count.</p>
-  </div>
+        <!-- Spinner -->
+        <div class="spinner" id="spinner">
+            <div class="bounce1"></div>
+            <div class="bounce2"></div>
+            <div class="bounce3"></div>
+        </div>
+    </form>
+</div>
 
-  <script>
-    const form = document.getElementById("dedupeForm");
-    const overlay = document.getElementById("loadingOverlay");
-    if (form) {
-      form.addEventListener("submit", () => {
-        overlay.style.display = "flex";
-      });
+<script>
+    const scanBtn = document.getElementById("scanButton");
+    const spinner = document.getElementById("spinner");
+
+    // ---------- SAFE FIX ----------
+    // Make Jinja output a string so JS does NOT break
+    const isSignedIn = "{{ 'true' if signed_in else 'false' }}";
+    const loggedIn = (isSignedIn === "true");
+
+    // ---------- If NOT signed in ----------
+    if (!loggedIn) {
+        scanBtn.addEventListener("click", function () {
+            alert("Please sign in with Google before scanning.");
+        });
     }
-  </script>
+
+    // ---------- Show spinner on scan ----------
+    if (loggedIn) {
+        document.getElementById("scanForm").addEventListener("submit", function () {
+            scanBtn.disabled = true;
+            spinner.style.display = "block";
+        });
+    }
+</script>
+
 </body>
 </html>
