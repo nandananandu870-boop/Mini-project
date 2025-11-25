@@ -2,7 +2,7 @@ import os
 import time
 import tempfile
 import traceback
-from flask import Flask, session, redirect, url_for, request, render_template, flash, send_file
+from flask import Flask, session, redirect, url_for, request, render_template, flash, send_file, jsonify
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -11,10 +11,10 @@ from rapidfuzz import fuzz
 from openpyxl import Workbook
 
 # --- CONFIG ---
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # dev only
-APP_SECRET_KEY = "NANDANA_SUPER_SECRET_KEY_123456789"  # replace for production
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # dev only (safe to keep)
+APP_SECRET_KEY = os.environ.get("APP_SECRET_KEY", "NANDANA_SUPER_SECRET_KEY_123456789")
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
-CLIENT_SECRETS_FILE = "client_secrets.json"
+CLIENT_SECRETS_FILE = os.environ.get("CLIENT_SECRETS_FILE", "client_secrets.json")
 OAUTH2_CALLBACK = os.environ.get(
     "OAUTH2_CALLBACK",
     "http://localhost:5000/oauth2callback"
@@ -123,6 +123,11 @@ def index():
 
 @app.route("/authorize")
 def authorize():
+    # If client secrets missing, prompt user with helpful message
+    if not os.path.exists(CLIENT_SECRETS_FILE):
+        flash("Missing client_secrets.json. Add it to the project or set CLIENT_SECRETS_FILE env var.")
+        return redirect(url_for("index"))
+
     try:
         flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, redirect_uri=OAUTH2_CALLBACK)
         auth_url, state = flow.authorization_url(access_type="offline", include_granted_scopes="true", prompt="consent")
@@ -138,6 +143,10 @@ def authorize():
 def oauth2callback():
     state = session.get("state")
     try:
+        if not os.path.exists(CLIENT_SECRETS_FILE):
+            flash("Missing client_secrets.json. OAuth cannot complete.")
+            return redirect(url_for("index"))
+
         flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state, redirect_uri=OAUTH2_CALLBACK)
         flow.fetch_token(authorization_response=request.url)
     except Exception as ex:
@@ -158,9 +167,16 @@ def signout():
     return redirect(url_for("index"))
 
 
-@app.route("/dedupe", methods=["POST"])
+# Allow GET so opening /dedupe in the browser doesn't give raw 405; POST still performs the scan.
+@app.route("/dedupe", methods=["GET", "POST"])
 def dedupe():
     """Main scan route. Returns results page with counts and tables."""
+    if request.method == "GET":
+        # Gentle instruction if someone navigates here directly
+        return render_template("dedupe_get_info.html") if os.path.exists("templates/dedupe_get_info.html") else \
+            ("This endpoint accepts POST from the scan form. Open the homepage and use the Scan button.", 200)
+
+    # POST logic below
     creds = creds_from_session()
     if not creds:
         flash("Please sign in with Google first.")
@@ -185,15 +201,23 @@ def dedupe():
 
     try:
         while fetched < max_emails:
-            resp = service.users().messages().list(userId="me", maxResults=min(page_size, max_emails - fetched),
-                                                   pageToken=page_token).execute()
+            resp = service.users().messages().list(
+                userId="me",
+                maxResults=min(page_size, max_emails - fetched),
+                pageToken=page_token
+            ).execute()
+
             for m in resp.get("messages", []):
-                # fetch only metadata headers (faster)
                 msg = service.users().messages().get(
-                    userId="me", id=m["id"], format="metadata", metadataHeaders=["From", "Subject", "Date"]
+                    userId="me",
+                    id=m["id"],
+                    format="metadata",
+                    metadataHeaders=["From", "Subject", "Date"]
                 ).execute()
+
                 headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
                 ts = int(msg.get("internalDate", "0"))
+
                 emails.append({
                     "id": m["id"],
                     "from": headers.get("From", ""),
@@ -201,6 +225,7 @@ def dedupe():
                     "date": headers.get("Date", ""),
                     "ts": ts
                 })
+
                 fetched += 1
                 if fetched >= max_emails:
                     break
@@ -208,6 +233,7 @@ def dedupe():
             page_token = resp.get("nextPageToken")
             if not page_token:
                 break
+
     except HttpError as he:
         print("Gmail fetch error:", he)
         flash("Gmail API error while fetching emails. Check logs.")
@@ -224,38 +250,36 @@ def dedupe():
         groups.setdefault(key, []).append(e)
 
     duplicate_groups = []
-    redundant_ids = []  # these are older copies we mark as duplicates and show/delete
+    redundant_ids = []
     redundant_emails_for_table = []
 
     for key, grp in groups.items():
         if len(grp) > 1:
-            # sort by timestamp desc (newest first) and keep the first as safe
             grp_sorted = sorted(grp, key=lambda x: x["ts"], reverse=True)
             duplicate_groups.append(grp_sorted)
-            # older copies -> redundant
+
             for e in grp_sorted[1:]:
                 redundant_ids.append(e["id"])
                 redundant_emails_for_table.append(e)
 
-    # Count exact duplicates as the number of redundant messages (older copies)
     duplicate_count = len(redundant_ids)
 
-    # Apply DUPLICATE label to redundant copies
+    # Apply DUPLICATE label
     try:
         lbl_duplicate_id = get_or_create_label(service, "DUPLICATE")
         if redundant_ids:
-            # batch modify in chunks of 1000 (API limit)
             for i in range(0, len(redundant_ids), 1000):
                 batch_add_label(service, redundant_ids[i:i + 1000], lbl_duplicate_id)
     except Exception as ex:
         print("Label/DUPLICATE error:", ex)
-        flash("Could not apply DUPLICATE label to messages (check scopes).")
+        flash("Could not apply DUPLICATE label to messages.")
 
-    # ---- Near duplicates (subject similarity) ----
+    # ---- Near duplicates ----
     pairs, near_ids = find_near_duplicates(emails, threshold=70)
-    # Create unique email list for near duplicates for table
     id_to_email = {e["id"]: e for e in emails}
-    near_unique_emails = [id_to_email[_id] for _id in sorted(near_ids, key=lambda i: id_to_email[i]["ts"], reverse=True)]
+    near_unique_emails = [
+        id_to_email[_id] for _id in sorted(near_ids, key=lambda i: id_to_email[i]["ts"], reverse=True)
+    ]
     near_count = len(near_unique_emails)
 
     try:
@@ -266,19 +290,20 @@ def dedupe():
                 batch_add_label(service, uid_list[i:i + 1000], lbl_near_id)
     except Exception as ex:
         print("Label/NEAR_DUPLICATE error:", ex)
-        flash("Could not apply NEAR_DUPLICATE label to messages (check scopes).")
+        flash("Could not apply NEAR_DUPLICATE label.")
 
-    # Save groups and label id for smart delete later
+    # Save groups for smart delete
     session["duplicate_groups"] = duplicate_groups
     session["duplicate_label_id"] = lbl_duplicate_id if 'lbl_duplicate_id' in locals() else None
+    session["last_fetched"] = fetched
 
-    # Render results: duplicates shown are the redundant copies (older ones) so counts match
+    # ---- FIXED: Pass list(), not proxy ----
     return render_template(
         "results.html",
         fetched=fetched,
         uniques=max(0, len(emails) - duplicate_count),
         duplicate_count=duplicate_count,
-        duplicates=redundant_emails_for_table,
+        duplicates=list(redundant_emails_for_table),  # ← FIXED
         similars=pairs,
         near_list=near_unique_emails,
         near_count=near_count
@@ -308,19 +333,17 @@ def smart_delete():
             continue
         keep = grp[0]
         kept.append(keep)
-        # remove DUPLICATE label from kept (if label exists)
+
         if duplicate_label_id:
             try:
                 batch_remove_label(service, [keep["id"]], duplicate_label_id)
             except Exception:
                 pass
-        # delete the older copies
+
         for e in grp[1:]:
             try:
                 service.users().messages().delete(userId="me", id=e["id"]).execute()
                 deleted.append(e)
-            except HttpError as he:
-                print("Smart delete error:", he)
             except Exception as ex:
                 print("Smart delete error:", ex)
 
@@ -330,11 +353,11 @@ def smart_delete():
 
 @app.route("/delete", methods=["POST"])
 def delete_selected():
-    """Delete selected ids from table (permanent)."""
     creds = creds_from_session()
     if not creds:
         flash("Sign in first.")
         return redirect(url_for("index"))
+
     service = safe_build_service(creds)
     if not service:
         flash("Gmail connection failed.")
@@ -342,6 +365,7 @@ def delete_selected():
 
     ids = request.form.getlist("ids")
     deleted = []
+
     for mid in ids:
         try:
             service.users().messages().delete(userId="me", id=mid).execute()
@@ -360,88 +384,33 @@ def export_excel():
     if not creds:
         flash("Sign in first.")
         return redirect(url_for("index"))
+
     service = safe_build_service(creds)
     if not service:
         flash("Gmail connection failed.")
         return redirect(url_for("index"))
 
-    # Attempt to reuse session-stored results to avoid re-scanning
-    # The dedupe route stores `duplicates` (redundant copies) & `similars` & `near_list` only in template render, so we saved groups earlier in session.
     duplicate_groups = session.get("duplicate_groups", [])
-    # Build duplicates list (redundant copies) from groups
     redundant_emails = []
     for grp in duplicate_groups:
         if len(grp) > 1:
             redundant_emails.extend(grp[1:])
 
-    # Near duplicates: we cannot rely on pairs stored in session (not stored), so re-run a lightweight fetch
-    # For reliability, re-run dedupe logic in-memory but with smaller limit: use previously scanned messages if present in session?
-    # For simplicity, we will re-use the last page fetch by calling /dedupe again would be expensive. Instead, we use what's stored in session (if any)
-    # Fallback: create empty sheets if not available.
-    # We'll rely on session-stored 'last_scan_emails' if user modified code to store it. For now, export what we have.
-    # (In our flow, duplicates were labeled in Gmail, so this is still useful.)
-
-    # Create workbook
     wb = Workbook()
     ws_sum = wb.active
     ws_sum.title = "Summary"
 
-    total_fetched = session.get("last_fetched", None)
-    if total_fetched is None:
-        # best-effort: count messages labelled DUPLICATE / NEAR_DUPLICATE via Gmail labels (expensive) - skip and leave blank
-        total_fetched = ""
+    total_fetched = session.get("last_fetched", "")
 
-    # Summary sheet
     ws_sum.append(["Metric", "Value"])
     ws_sum.append(["Total Emails Fetched (scan)", total_fetched])
-    ws_sum.append(["Exact Duplicate Emails (older copies)", len(redundant_emails)])
-    # For near duplicates, we can probe labels (fast if labels exist)
-    # try to find NEAR_DUPLICATE label and count messages with it
-    near_count = ""
-    try:
-        labels = service.users().labels().list(userId="me").execute().get("labels", [])
-        near_label = next((l for l in labels if l.get("name", "").lower() == "near_duplicate"), None)
-        if near_label:
-            resp = service.users().messages().list(userId="me", labelIds=[near_label["id"]], maxResults=1).execute()
-            # API doesn't return totalResults always; but list returns 'resultSizeEstimate'
-            near_count = resp.get("resultSizeEstimate", "")
-    except Exception:
-        near_count = ""
+    ws_sum.append(["Exact Duplicate Emails", len(redundant_emails)])
 
-    ws_sum.append(["Near Duplicate Emails (unique flagged)", near_count])
-
-    # Exact duplicates sheet
     ws_dup = wb.create_sheet("ExactDuplicates")
     ws_dup.append(["From", "Subject", "Date", "Message ID", "Timestamp"])
     for e in redundant_emails:
         ws_dup.append([e.get("from"), e.get("subject"), e.get("date"), e.get("id"), e.get("ts")])
 
-    # Near duplicates sheet (try to fetch messages by NEAR_DUPLICATE label)
-    ws_near = wb.create_sheet("NearDuplicates")
-    ws_near.append(["From", "Subject", "Date", "Message ID"])
-    try:
-        if near_label:
-            # iterate all messages with this label (page through)
-            token = None
-            while True:
-                resp = service.users().messages().list(userId="me", labelIds=[near_label["id"]], pageToken=token,
-                                                       maxResults=500).execute()
-                for m in resp.get("messages", []):
-                    msg = service.users().messages().get(userId="me", id=m["id"], format="metadata",
-                                                         metadataHeaders=["From", "Subject", "Date"]).execute()
-                    headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
-                    ws_near.append([headers.get("From", ""), headers.get("Subject", ""), headers.get("Date", ""), m["id"]])
-                token = resp.get("nextPageToken")
-                if not token:
-                    break
-    except Exception as ex:
-        print("export near fetch error:", ex)
-
-    # Near pairs sheet (optional) - we'll leave empty if we don't have pairs cached
-    ws_pairs = wb.create_sheet("NearPairs")
-    ws_pairs.append(["From 1", "Subject 1", "From 2", "Subject 2", "Similarity (%)"])
-
-    # Save to temporary file and send
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     tmp_name = tmp.name
     tmp.close()
@@ -450,10 +419,14 @@ def export_excel():
     return send_file(tmp_name, as_attachment=True, download_name="gmail_scan_report.xlsx")
 
 
-# --- error handlers (basic) ---
+@app.route("/dedupe_test")
+def dedupe_test():
+    """Simple smoke-test route to verify the server is up without performing Gmail actions."""
+    return "dedupe endpoint alive. Use POST /dedupe with a signed-in session to run the scan."
+
+
 @app.errorhandler(500)
 def internal_error(e):
-    # try to show friendly page with stack trace summary (debug off)
     tb = traceback.format_exc()
     print("Internal error:", tb)
     try:
@@ -463,4 +436,5 @@ def internal_error(e):
 
 
 if __name__ == "__main__":
+    # Use port 5000 for local dev. In production Gunicorn will run the app.
     app.run("0.0.0.0", port=5000, debug=False)
