@@ -1,5 +1,7 @@
-Flask>=2.0
-google-api-python-client>=2.0
-google-auth>=2.0
-google-auth-oauthlib>=0.4.6
-gunicorn>=20.1.0
+Flask==3.0.3
+gunicorn==23.0.0
+google-api-python-client==2.127.0
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+rapidfuzz==3.9.0
+openpyxl==3.1.2
