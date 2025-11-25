@@ -15,7 +15,10 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # dev only
 APP_SECRET_KEY = "NANDANA_SUPER_SECRET_KEY_123456789"  # replace for production
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 CLIENT_SECRETS_FILE = "client_secrets.json"
-OAUTH2_CALLBACK = "http://localhost:5000/oauth2callback"
+OAUTH2_CALLBACK = os.environ.get(
+    "OAUTH2_CALLBACK",
+    "http://localhost:5000/oauth2callback"
+)
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET_KEY
