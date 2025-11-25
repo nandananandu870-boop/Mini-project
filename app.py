@@ -141,17 +141,50 @@ def authorize():
 
 @app.route("/oauth2callback")
 def oauth2callback():
+    """
+    Debug-enhanced oauth2callback:
+      - logs the full request URL and args (so we can see what Google actually returned)
+      - handles 'error' param (user denied / other)
+      - detects missing 'code' param and shows helpful message
+      - performs normal token exchange when code present
+    """
     state = session.get("state")
+
+    # Log incoming URL & args so Railway logs show what Google returned
+    try:
+        print("oauth2callback: full request.url ->", request.url)
+        print("oauth2callback: request.args ->", request.args.to_dict())
+    except Exception:
+        pass
+
+    # If Google returned an error (user denied or other), show it
+    if "error" in request.args:
+        err = request.args.get("error")
+        print("oauth2callback error param present:", err)
+        flash(f"Google OAuth returned an error: {err}. Try again and choose Allow.")
+        return redirect(url_for("index"))
+
+    # If the code param is missing, we can't continue
+    if "code" not in request.args:
+        print("oauth2callback error: missing 'code' param in request.")
+        flash("Missing authorization code from Google. Please retry the sign-in flow.")
+        return redirect(url_for("index"))
+
+    # Normal flow: exchange code for tokens
     try:
         if not os.path.exists(CLIENT_SECRETS_FILE):
             flash("Missing client_secrets.json. OAuth cannot complete.")
             return redirect(url_for("index"))
 
-        flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state, redirect_uri=OAUTH2_CALLBACK)
+        flow = Flow.from_client_secrets_file(
+            CLIENT_SECRETS_FILE,
+            scopes=SCOPES,
+            state=state,
+            redirect_uri=OAUTH2_CALLBACK
+        )
         flow.fetch_token(authorization_response=request.url)
     except Exception as ex:
-        # mismatched state or fetch failure
-        print("oauth2callback error:", ex)
+        print("oauth2callback error during fetch_token:", ex)
         flash("Login failed or session expired. Please try again.")
         return redirect(url_for("index"))
 
