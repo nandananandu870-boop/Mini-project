@@ -120,7 +120,6 @@ def index():
     signed_in = bool(creds and creds.valid)
     return render_template("index.html", signed_in=signed_in)
 
-
 @app.route("/authorize")
 def authorize():
     # If client secrets missing, prompt user with helpful message

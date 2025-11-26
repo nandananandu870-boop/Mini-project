@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gmail Data De-duplication</title>
+
   <style>
     * {
       margin: 0;
@@ -51,7 +52,18 @@
     p {
       color: #555;
       font-size: 14px;
-      margin-bottom: 25px;
+      margin-bottom: 15px;
+    }
+
+    /* Added Style for Email Display */
+    .email-display {
+      margin-bottom: 15px;
+      background: rgba(255,255,255,0.7);
+      padding: 8px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #1e3a8a;
+      font-weight: 600;
     }
 
     .logo {
@@ -124,7 +136,6 @@
       font-weight: 600;
     }
 
-    /* ===== LOADING OVERLAY ===== */
     #loadingOverlay {
       display: none;
       position: fixed;
@@ -181,9 +192,17 @@
     }
   </style>
 </head>
+
 <body>
+
   <div class="container">
     <div class="logo">📧</div>
+
+    <!-- SHOW EMAIL HERE -->
+    {% if user_email %}
+      <p class="email-display">Signed in as: <strong>{{ user_email }}</strong></p>
+    {% endif %}
+
     <h1><span>Gmail</span> De-duplication</h1>
     <p>Remove duplicate emails securely and efficiently.</p>
 
@@ -208,7 +227,6 @@
     </footer>
   </div>
 
-  <!-- LOADING OVERLAY -->
   <div id="loadingOverlay">
     <div class="spinner"></div>
     <div class="loading-text">Scanning your Gmail<span class="dots"></span></div>
@@ -224,5 +242,6 @@
       });
     }
   </script>
+
 </body>
 </html>
