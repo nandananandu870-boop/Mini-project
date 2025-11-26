@@ -45,9 +45,8 @@
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
       transition: 0.3s ease;
     }
-    .card:hover {
-      transform: translateY(-4px);
-    }
+    .card:hover { transform: translateY(-4px); }
+
     .card h3 {
       color: #475569;
       font-size: 14px;
@@ -84,9 +83,7 @@
       z-index: 10;
     }
 
-    tr:hover {
-      background: #f8fafc;
-    }
+    tr:hover { background: #f8fafc; }
 
     .badge {
       padding: 4px 10px;
@@ -95,11 +92,11 @@
       font-weight: 600;
       color: white;
     }
+
     .dup { background: #dc2626; }
     .near { background: #2563eb; }
 
-    .group-odd { background: #f9fafb; }
-    .group-even { background: #eef2ff; }
+    .panel { margin-bottom: 40px; }
 
     .btn {
       padding: 10px 16px;
@@ -110,11 +107,12 @@
       font-size: 14px;
       transition: 0.3s;
     }
-    .btn-delete { background: #ef4444; color: white; }
-    .btn-delete:hover { background: #dc2626; }
 
     .btn-smart { background: #16a34a; color: white; }
     .btn-smart:hover { background: #15803d; }
+
+    .btn-delete { background: #ef4444; color: white; }
+    .btn-delete:hover { background: #dc2626; }
 
     .back-btn {
       position: fixed;
@@ -129,7 +127,6 @@
       box-shadow: 0 3px 12px rgba(0,0,0,0.2);
       cursor: pointer;
     }
-
   </style>
 </head>
 
@@ -151,19 +148,14 @@
 
   <!-- EXACT DUPLICATES -->
   <div class="panel">
-    <h3>📑 Exact Duplicates (Grouped by Sender + Subject)</h3>
+    <h3>📑 Exact Duplicates (Sender + Subject)</h3>
 
     {% if duplicates %}
-      {% set group_size = duplicates | length %}
-      <p><strong>Total Exact Duplicate Emails:</strong> {{ duplicate_count }}</p>
-      <p><strong>Total Groups:</strong> {{ duplicate_count // 1 }}</p>
+      <p><strong>Total Exact Duplicates:</strong> {{ duplicate_count }}</p>
 
-      <form action="/delete" method="POST">
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Select</th>
             <th>From</th>
             <th>Subject</th>
             <th>Date</th>
@@ -172,27 +164,17 @@
         </thead>
         <tbody>
 
-        {% set i = 1 %}
         {% for d in duplicates %}
           <tr>
-            <td>{{ i }}</td>
-            <td><input type="checkbox" name="ids" value="{{ d.id }}"></td>
             <td>{{ d.from }}</td>
             <td>{{ d.subject }}</td>
             <td>{{ d.date }}</td>
             <td><span class="badge dup">DUPLICATE</span></td>
           </tr>
-          {% set i = i + 1 %}
         {% endfor %}
 
         </tbody>
       </table>
-
-      <div style="text-align:center; margin-top:20px;">
-        <button class="btn btn-delete">🗑 Delete Selected</button>
-      </div>
-
-      </form>
 
     {% else %}
       <p style="text-align:center;">No exact duplicates found 🎉</p>
@@ -202,7 +184,7 @@
   <!-- SMART DELETE -->
   <div class="panel">
     <h3>🤖 Smart Delete</h3>
-    <p style="text-align:center;">Automatically keeps **one copy** and deletes all older duplicates.</p>
+    <p style="text-align:center;">Keeps one copy and deletes all older duplicates.</p>
     <div style="text-align:center; margin-top:15px;">
       <form action="/smart_delete" method="POST">
         <button class="btn btn-smart">Run Smart Delete</button>
@@ -229,6 +211,7 @@
         </tr>
       </thead>
       <tbody>
+
         {% set n_i = 1 %}
         {% for n in similars %}
         <tr>
@@ -241,13 +224,13 @@
         </tr>
         {% set n_i = n_i + 1 %}
         {% endfor %}
+
       </tbody>
     </table>
 
     {% else %}
       <p style="text-align:center;">No near duplicates found 🎯</p>
     {% endif %}
-
   </div>
 
   <!-- EXPORT -->
