@@ -154,27 +154,24 @@
       <p><strong>Total Exact Duplicates:</strong> {{ duplicate_count }}</p>
 
       <table>
-        <thead>
-          <tr>
-            <th>From</th>
-            <th>Subject</th>
-            <th>Date</th>
-            <th>Label</th>
-          </tr>
-        </thead>
-        <tbody>
+    <tr>
+        <th>S.No</th>
+        <th>From</th>
+        <th>Subject</th>
+        <th>Date</th>
+        <th>Label</th>
+    </tr>
 
-        {% for d in duplicates %}
-          <tr>
-            <td>{{ d.from }}</td>
-            <td>{{ d.subject }}</td>
-            <td>{{ d.date }}</td>
-            <td><span class="badge dup">DUPLICATE</span></td>
-          </tr>
-        {% endfor %}
-
-        </tbody>
-      </table>
+    {% for email in duplicates %}
+    <tr>
+        <td>{{ loop.index }}</td>   <!-- Serial number -->
+        <td>{{ email.from }}</td>
+        <td>{{ email.subject }}</td>
+        <td>{{ email.date }}</td>
+        <td><span class="badge bg-danger">DUPLICATE</span></td>
+    </tr>
+    {% endfor %}
+</table>
 
     {% else %}
       <p style="text-align:center;">No exact duplicates found 🎉</p>
