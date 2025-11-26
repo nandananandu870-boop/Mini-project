@@ -205,7 +205,7 @@ def signout():
 def dedupe():
     """Main scan route. Returns results page with counts and tables."""
     if request.method == "GET":
-    return redirect(url_for("index"))
+        return redirect(url_for("index"))   # MUST be indented properly
 
     # POST logic below
     creds = creds_from_session()
