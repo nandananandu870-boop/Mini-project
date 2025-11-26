@@ -45,6 +45,7 @@
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
       transition: 0.3s ease;
     }
+
     .card:hover { transform: translateY(-4px); }
 
     .card h3 {
@@ -52,6 +53,7 @@
       font-size: 14px;
       margin: 0;
     }
+
     .card p {
       color: #1e40af;
       font-size: 28px;
@@ -154,24 +156,28 @@
       <p><strong>Total Exact Duplicates:</strong> {{ duplicate_count }}</p>
 
       <table>
-    <tr>
-        <th>S.No</th>
-        <th>From</th>
-        <th>Subject</th>
-        <th>Date</th>
-        <th>Label</th>
-    </tr>
+        <thead>
+          <tr>
+            <th>S.No</th>
+            <th>From</th>
+            <th>Subject</th>
+            <th>Date</th>
+            <th>Label</th>
+          </tr>
+        </thead>
 
-    {% for email in duplicates %}
-    <tr>
-        <td>{{ loop.index }}</td>   <!-- Serial number -->
-        <td>{{ email.from }}</td>
-        <td>{{ email.subject }}</td>
-        <td>{{ email.date }}</td>
-        <td><span class="badge bg-danger">DUPLICATE</span></td>
-    </tr>
-    {% endfor %}
-</table>
+        <tbody>
+          {% for email in duplicates %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ email.from }}</td>
+            <td>{{ email.subject }}</td>
+            <td>{{ email.date }}</td>
+            <td><span class="badge dup">DUPLICATE</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
 
     {% else %}
       <p style="text-align:center;">No exact duplicates found 🎉</p>
@@ -199,7 +205,7 @@
     <table>
       <thead>
         <tr>
-          <!-- <th>#</th> -->
+          <th>S.No</th>
           <th>From</th>
           <th>Subject 1</th>
           <th>Subject 2</th>
@@ -209,17 +215,15 @@
       </thead>
       <tbody>
 
-        {% set n_i = 1 %}
         {% for n in similars %}
         <tr>
-          <!-- <td>{{ n_i }}</td> -->
+          <td>{{ loop.index }}</td>
           <td>{{ n.email1.from }}</td>
           <td>{{ n.email1.subject }}</td>
           <td>{{ n.email2.subject }}</td>
           <td>{{ n.similarity }}</td>
           <td><span class="badge near">NEAR_DUPLICATE</span></td>
         </tr>
-        {% set n_i = n_i + 1 %}
         {% endfor %}
 
       </tbody>

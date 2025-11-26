@@ -205,9 +205,7 @@ def signout():
 def dedupe():
     """Main scan route. Returns results page with counts and tables."""
     if request.method == "GET":
-        # Gentle instruction if someone navigates here directly
-        return render_template("dedupe_get_info.html") if os.path.exists("templates/dedupe_get_info.html") else \
-            ("This endpoint accepts POST from the scan form. Open the homepage and use the Scan button.", 200)
+    return redirect(url_for("index"))
 
     # POST logic below
     creds = creds_from_session()
@@ -469,5 +467,6 @@ def internal_error(e):
 
 
 if __name__ == "__main__":
-    # Use port 5000 for local dev. In production Gunicorn will run the app.
-    app.run("0.0.0.0", port=5000, debug=False)
+    # Use PORT env var when available (Railway sets $PORT). Fallback to 5000 for local dev.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
