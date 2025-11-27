@@ -328,7 +328,6 @@ def dedupe():
         near_count=near_count
     )
 
-# ✔ SMART DELETE (keep newest, delete others permanently)
 @app.route("/smart_delete", methods=["POST"])
 def smart_delete():
     creds = creds_from_session()
@@ -342,39 +341,50 @@ def smart_delete():
         return redirect(url_for("index"))
 
     duplicate_groups = session.get("duplicate_groups", [])
-    duplicate_label_id = session.get("duplicate_label_id", None)
 
-    deleted = []
-    kept = []
+    safe_copies = []
+    deleted_emails = []
 
     for grp in duplicate_groups:
         if not grp:
             continue
 
-        # newest email kept
+        # newest email kept safe
         keep = grp[0]
-        kept.append(keep)
+        safe_copies.append(keep)
 
-        # remove "DUPLICATE" label from kept
-        if duplicate_label_id:
-            try:
-                batch_remove_label(service, [keep["id"]], duplicate_label_id)
-            except:
-                pass
-
-        # delete remaining duplicates PERMANENTLY
+        # delete remaining CURRENT copies permanently
         for e in grp[1:]:
             try:
+                # Gmail permanent delete
                 service.users().messages().delete(
                     userId="me",
                     id=e["id"]
                 ).execute()
-                deleted.append(e)
-            except Exception as ex:
-                print("Smart delete error:", ex)
 
-    flash(f"Smart delete finished. Deleted {len(deleted)} messages permanently.")
-    return render_template("deleted.html", kept=kept, deleted=deleted)
+                deleted_emails.append(e)
+
+            except HttpError as he:
+                print("Permanent delete blocked, switching to TRASH:", he)
+
+                # fallback: move to trash
+                try:
+                    service.users().messages().trash(
+                        userId="me",
+                        id=e["id"]
+                    ).execute()
+                    deleted_emails.append(e)
+                except Exception as ex:
+                    print("Trash failed too:", ex)
+
+    flash(f"Smart delete completed. Deleted {len(deleted_emails)} emails.")
+
+    # IMPORTANT: Use correct template name
+    return render_template(
+        "deleted.html",
+        kept=safe_copies,
+        deleted=deleted_emails
+    )
 
 # ✔ MANUAL DELETE (moves selected emails to Trash)
 @app.route("/delete_selected", methods=["POST"])

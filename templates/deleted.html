@@ -1,127 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deletion Summary</title>
+    <meta charset="UTF-8">
+    <title>Smart Delete Summary</title>
 
-  <style>
-    body {
-      background: #f3f6fb;
-      font-family: "Poppins", sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #222;
-    }
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f4ff;
+            margin: 0;
+            padding: 0;
+        }
 
-    .wrapper {
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-    }
+        .container {
+            width: 80%;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
 
-    h2 {
-      text-align: center;
-      color: #1e3a8a;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
+        h2 {
+            text-align: center;
+            color: #1d4ed8;
+            margin-bottom: 25px;
+        }
 
-    .list-box {
-      background: #f8fafc;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
+        .summary-box {
+            background: #eef4ff;
+            padding: 15px 20px;
+            border-left: 5px solid #1d4ed8;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
 
-    .item {
-      padding: 10px;
-      border-bottom: 1px solid #e2e8f0;
-    }
+        .summary-box p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
 
-    .item:last-child { border-bottom: none; }
+        .section-title {
+            font-size: 20px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #1e293b;
+        }
 
-    /* SAFE COPY BADGE */
-    .safe-badge {
-      background: #3b82f6;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 10px;
-    }
+        .card {
+            background: #ffffff;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-left: 4px solid #dc2626;
+            border-radius: 6px;
+        }
 
-    /* HIGHLIGHT SAFE COPY ROW */
-    .safe-row {
-      background: #e0f2fe;
-      border-left: 4px solid #0284c7;
-    }
+        .safe-card {
+            background: #e8f3ff;
+            border-left: 4px solid #2563eb;
+        }
 
-    /* DELETED BADGE */
-    .del-badge {
-      background: #ef4444;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-left: 10px;
-    }
+        .label {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            color: white;
+        }
 
-    .back-btn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 10px 16px;
-      background: #2563eb;
-      color: white;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-    }
-  </style>
+        .del-label { background: #dc2626; }
+        .safe-label { background: #2563eb; }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        .back-btn:hover {
+            background: #1d4ed8;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="wrapper">
+<div class="container">
 
-  <h2>🗑 Smart Delete Summary</h2>
+    <h2>🧹 Smart Delete Summary</h2>
 
-  <h3>Deleted Emails ({{ deleted|length }})</h3>
-  <div class="list-box">
+    <!-- Summary Numbers -->
+    <div class="summary-box">
+        <p><strong>Total Deleted Emails:</strong> {{ deleted | length }}</p>
+        <p><strong>Total Safe Copies Kept:</strong> {{ kept | length }}</p>
+        <p><strong>Total Duplicate Groups:</strong> {{ kept | length }}</p>
+    </div>
+
+    <!-- Deleted Emails -->
+    <div class="section-title">🗑 Deleted Emails ({{ deleted|length }})</div>
+
     {% if deleted %}
-      {% for email in deleted %}
-      <div class="item">
-        <strong>{{ email.subject }}</strong> — {{ email.date }}
-        <span class="del-badge">DELETED</span>
-      </div>
-      {% endfor %}
+        {% for e in deleted %}
+            <div class="card">
+                <strong>{{ e.subject }}</strong> — {{ e.date }}
+                <span class="label del-label">DELETED</span>
+            </div>
+        {% endfor %}
     {% else %}
-      <p>No emails were deleted.</p>
+        <p>No emails were deleted.</p>
     {% endif %}
-  </div>
 
-  <h3>Kept One Safe Copy</h3>
-  <div class="list-box">
-    {% if kept %}
-      {% for email in kept %}
-      <div class="item safe-row">
-        <strong>{{ email.subject }}</strong> — {{ email.date }}
-        <span class="safe-badge">SAFE COPY</span>
-      </div>
-      {% endfor %}
-    {% else %}
-      <p>No emails kept (nothing to dedupe).</p>
-    {% endif %}
-  </div>
+    <!-- Safe Copies -->
+    <div class="section-title">📌 Kept One Safe Copy ({{ kept|length }})</div>
 
-  <a href="/" class="back-btn">⬅ Back to Home</a>
+    {% for s in kept %}
+        <div class="card safe-card">
+            <strong>{{ s.subject }}</strong> — {{ s.date }}
+            <span class="label safe-label">SAFE COPY</span>
+        </div>
+    {% endfor %}
+
+    <a href="/" class="back-btn">⬅ Back to Home</a>
 
 </div>
-
 </body>
 </html>
