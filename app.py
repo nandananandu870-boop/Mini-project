@@ -23,7 +23,6 @@ OAUTH2_CALLBACK = os.environ.get(
 app = Flask(__name__)
 app.secret_key = APP_SECRET_KEY
 
-
 # --- HELPERS: credentials & Gmail service ---
 def creds_to_dict(creds: Credentials):
     return {
@@ -35,12 +34,10 @@ def creds_to_dict(creds: Credentials):
         "scopes": creds.scopes,
     }
 
-
 def creds_from_session():
     if "credentials" not in session:
         return None
     return Credentials(**session["credentials"])
-
 
 def safe_build_service(creds, retries=3, delay=1.0):
     """Build Gmail service and validate by calling getProfile (with minimal retries)."""
@@ -55,7 +52,6 @@ def safe_build_service(creds, retries=3, delay=1.0):
                 time.sleep(delay)
             else:
                 return None
-
 
 # --- Duplicate detection ---
 def find_near_duplicates(emails, threshold=70):
@@ -87,7 +83,6 @@ def find_near_duplicates(emails, threshold=70):
         unique_ids.add(p["email2"]["id"])
     return pairs, unique_ids
 
-
 # --- Label helpers ---
 def get_or_create_label(service, label_name: str):
     labels_resp = service.users().labels().list(userId="me").execute()
@@ -98,20 +93,17 @@ def get_or_create_label(service, label_name: str):
     created = service.users().labels().create(userId="me", body=body).execute()
     return created["id"]
 
-
 def batch_add_label(service, ids, label_id):
     if not ids:
         return
     body = {"ids": list(ids), "addLabelIds": [label_id], "removeLabelIds": []}
     service.users().messages().batchModify(userId="me", body=body).execute()
 
-
 def batch_remove_label(service, ids, label_id):
     if not ids:
         return
     body = {"ids": list(ids), "addLabelIds": [], "removeLabelIds": [label_id]}
     service.users().messages().batchModify(userId="me", body=body).execute()
-
 
 # --- ROUTES ---
 @app.route("/")
@@ -136,7 +128,6 @@ def authorize():
         flash("Authorization error. Check client_secrets.json and OAuth setup.")
         print("authorize error:", ex)
         return redirect(url_for("index"))
-
 
 @app.route("/oauth2callback")
 def oauth2callback():
@@ -191,13 +182,11 @@ def oauth2callback():
     flash("✅ Signed in with Google.")
     return redirect(url_for("index"))
 
-
 @app.route("/signout")
 def signout():
     session.clear()
     flash("Signed out.")
     return redirect(url_for("index"))
-
 
 # Allow GET so opening /dedupe in the browser doesn't give raw 405; POST still performs the scan.
 @app.route("/dedupe", methods=["GET", "POST"])
@@ -339,7 +328,7 @@ def dedupe():
         near_count=near_count
     )
 
-
+# ✔ SMART DELETE (keep newest, delete others permanently)
 @app.route("/smart_delete", methods=["POST"])
 def smart_delete():
     creds = creds_from_session()
@@ -361,27 +350,34 @@ def smart_delete():
     for grp in duplicate_groups:
         if not grp:
             continue
+
+        # newest email kept
         keep = grp[0]
         kept.append(keep)
 
+        # remove "DUPLICATE" label from kept
         if duplicate_label_id:
             try:
                 batch_remove_label(service, [keep["id"]], duplicate_label_id)
-            except Exception:
+            except:
                 pass
 
+        # delete remaining duplicates PERMANENTLY
         for e in grp[1:]:
             try:
-                service.users().messages().delete(userId="me", id=e["id"]).execute()
+                service.users().messages().delete(
+                    userId="me",
+                    id=e["id"]
+                ).execute()
                 deleted.append(e)
             except Exception as ex:
                 print("Smart delete error:", ex)
 
-    flash(f"Smart delete finished. Deleted {len(deleted)} messages.")
+    flash(f"Smart delete finished. Deleted {len(deleted)} messages permanently.")
     return render_template("deleted.html", kept=kept, deleted=deleted)
 
-
-@app.route("/delete", methods=["POST"])
+# ✔ MANUAL DELETE (moves selected emails to Trash)
+@app.route("/delete_selected", methods=["POST"])
 def delete_selected():
     creds = creds_from_session()
     if not creds:
@@ -398,14 +394,17 @@ def delete_selected():
 
     for mid in ids:
         try:
-            service.users().messages().delete(userId="me", id=mid).execute()
+            # Move to Trash (not permanent)
+            service.users().messages().trash(
+                userId="me",
+                id=mid
+            ).execute()
             deleted.append(mid)
         except Exception as ex:
             print("delete_selected error:", ex)
 
-    flash(f"Deleted {len(deleted)} selected messages.")
+    flash(f"Moved {len(deleted)} emails to Trash.")
     return redirect(url_for("index"))
-
 
 @app.route("/export_excel")
 def export_excel():
@@ -448,12 +447,10 @@ def export_excel():
 
     return send_file(tmp_name, as_attachment=True, download_name="gmail_scan_report.xlsx")
 
-
 @app.route("/dedupe_test")
 def dedupe_test():
     """Simple smoke-test route to verify the server is up without performing Gmail actions."""
     return "dedupe endpoint alive. Use POST /dedupe with a signed-in session to run the scan."
-
 
 @app.errorhandler(500)
 def internal_error(e):
@@ -463,7 +460,6 @@ def internal_error(e):
         return render_template("500.html", error=str(e)), 500
     except Exception:
         return "Internal server error. Check logs.", 500
-
 
 if __name__ == "__main__":
     # Use PORT env var when available (Railway sets $PORT). Fallback to 5000 for local dev.

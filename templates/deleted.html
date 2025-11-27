@@ -1,63 +1,127 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deletion Summary</title>
+
   <style>
-    body { font-family: Arial, sans-serif; background:#f8fafc; padding: 24px; color:#222; }
-    h2 { margin-bottom: 6px; }
-    .section { margin-top: 18px; }
-    table { width: 100%; border-collapse: collapse; background:#fff; margin-top: 10px; }
-    th, td { border:1px solid #ddd; padding:8px; font-size:14px; text-align:left; }
-    th { background:#eef2f7; }
-    .ok { color:#2ecc71; }
-    .del { color:#e74c3c; }
-    a { display:inline-block; margin-top: 16px; text-decoration:none; color:#007bff; }
-    a:hover { text-decoration: underline; }
+    body {
+      background: #f3f6fb;
+      font-family: "Poppins", sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+
+    .wrapper {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      color: #1e3a8a;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .list-box {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .item {
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .item:last-child { border-bottom: none; }
+
+    /* SAFE COPY BADGE */
+    .safe-badge {
+      background: #3b82f6;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    /* HIGHLIGHT SAFE COPY ROW */
+    .safe-row {
+      background: #e0f2fe;
+      border-left: 4px solid #0284c7;
+    }
+
+    /* DELETED BADGE */
+    .del-badge {
+      background: #ef4444;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 16px;
+      background: #2563eb;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
   </style>
 </head>
+
 <body>
-  <h2>🗑 Deletion Summary</h2>
 
-  {% if kept_one %}
-    <p class="ok">Smart Delete finished — kept the newest email in each duplicate group.</p>
-  {% else %}
-    <p>Deleted the selected emails.</p>
-  {% endif %}
+<div class="wrapper">
 
-  {% if kept_mails and kept_mails|length > 0 %}
-    <div class="section">
-      <h3 class="ok">Kept (Newest)</h3>
-      <table>
-        <tr><th>From</th><th>Subject</th><th>Date</th></tr>
-        {% for m in kept_mails %}
-          <tr>
-            <td>{{ m.from }}</td>
-            <td>{{ m.subject }}</td>
-            <td>{{ m.date }}</td>
-          </tr>
-        {% endfor %}
-      </table>
-    </div>
-  {% endif %}
+  <h2>🗑 Smart Delete Summary</h2>
 
-  {% if deleted_mails and deleted_mails|length > 0 %}
-    <div class="section">
-      <h3 class="del">Moved to Trash</h3>
-      <table>
-        <tr><th>From</th><th>Subject</th><th>Date</th></tr>
-        {% for m in deleted_mails %}
-          <tr>
-            <td>{{ m.from }}</td>
-            <td>{{ m.subject }}</td>
-            <td>{{ m.date }}</td>
-          </tr>
-        {% endfor %}
-      </table>
-    </div>
-  {% else %}
-    <p>No emails were deleted.</p>
-  {% endif %}
+  <h3>Deleted Emails ({{ deleted|length }})</h3>
+  <div class="list-box">
+    {% if deleted %}
+      {% for email in deleted %}
+      <div class="item">
+        <strong>{{ email.subject }}</strong> — {{ email.date }}
+        <span class="del-badge">DELETED</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p>No emails were deleted.</p>
+    {% endif %}
+  </div>
 
-  <a href="/">← Back to Home</a>
+  <h3>Kept One Safe Copy</h3>
+  <div class="list-box">
+    {% if kept %}
+      {% for email in kept %}
+      <div class="item safe-row">
+        <strong>{{ email.subject }}</strong> — {{ email.date }}
+        <span class="safe-badge">SAFE COPY</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p>No emails kept (nothing to dedupe).</p>
+    {% endif %}
+  </div>
+
+  <a href="/" class="back-btn">⬅ Back to Home</a>
+
+</div>
+
 </body>
 </html>

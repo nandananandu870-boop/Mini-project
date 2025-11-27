@@ -146,41 +146,51 @@
     <div class="card"><h3>Near Duplicate Emails</h3><p>{{ near_count }}</p></div>
   </div>
 
-  <!-- EXACT DUPLICATES -->
-  <div class="panel">
-    <h3>📑 Exact Duplicates (Sender + Subject)</h3>
+<!-- EXACT DUPLICATES HEADER + COUNT -->
+<div class="panel">
+  <h3>📑 Exact Duplicates (Sender + Subject)</h3>
+  <p style="text-align:center;">
+    <strong>Total Exact Duplicate Emails:</strong> {{ duplicate_count }}
+  </p>
+  <p style="text-align:center;">These emails have identical Sender + Subject.</p>
+</div>
 
-    {% if duplicates %}
-      <p><strong>Total Exact Duplicates:</strong> {{ duplicate_count }}</p>
+<!-- MANUAL DELETE -->
+<div class="panel">
+  <h3>🗑 Manual Delete</h3>
+  <p style="text-align:center;">Select emails and delete manually.</p>
 
-      <table>
-        <thead>
-          <tr>
-            <th>S.No</th>
-            <th>From</th>
-            <th>Subject</th>
-            <th>Date</th>
-            <th>Label</th>
-          </tr>
-        </thead>
+  <form action="{{ url_for('delete_selected') }}" method="POST">
+    <table>
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>S.No</th>
+          <th>From</th>
+          <th>Subject</th>
+          <th>Date</th>
+          <th>Label</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for email in duplicates %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ email.id }}"></td>
+          <td>{{ loop.index }}</td>
+          <td>{{ email.from }}</td>
+          <td>{{ email.subject }}</td>
+          <td>{{ email.date }}</td>
+          <td><span class="badge dup">DUPLICATE</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-        <tbody>
-          {% for email in duplicates %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ email.from }}</td>
-            <td>{{ email.subject }}</td>
-            <td>{{ email.date }}</td>
-            <td><span class="badge dup">DUPLICATE</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-    {% else %}
-      <p style="text-align:center;">No exact duplicates found 🎉</p>
-    {% endif %}
-  </div>
+    <div style="text-align:center; margin-top:15px;">
+      <button class="btn btn-delete">Delete Selected</button>
+    </div>
+  </form>
+</div>
 
   <!-- SMART DELETE -->
   <div class="panel">
